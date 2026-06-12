@@ -1,4 +1,12 @@
-import { useState } from "react";
+<!<!DOCTYPE html>
+<html lang="kaa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspektor Plansheti</title>
+</head>
+<body>
+<script>
 
 const STATIYALAR = [
   { id: 1, kod: "120-modda 1-q", nomi: "Xavfsizlik kamarini takmagan", jarima: 206000, ball: 0.2, emoji: "🪢" },
@@ -316,3 +324,54 @@ Qoidabuzarlik: ${s.nomi}
     </div>
   );
 }
+</script>
+
+<div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #f4f4f9; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;">
+    <h2 style="color: #333; text-align: center;">Inspektor Plansheti</h2>
+    
+    <div style="margin-bottom: 20px;">
+        <label style="font-weight: bold; display: block; margin-bottom: 5px;">Statıyalardı qıdırıw:</label>
+        <input type="text" id="searchInp" placeholder="Modda nomeri yamasa gáp qıdırıw..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+    </div>
+
+    <div id="statusBaxyt" style="margin-bottom: 15px; font-weight: bold; color: #555;"></div>
+
+    <div id="statıyaDizimi" style="display: flex; flex-direction: column; gap: 10px;"></div>
+</div>
+
+<script>
+const searchInp = document.getElementById('searchInp');
+const statıyaDizimi = document.getElementById('statıyaDizimi');
+const statusBaxyt = document.getElementById('statusBaxyt');
+
+function statiyalardiShigar(filtr = '') {
+    statıyaDizimi.innerHTML = '';
+    const sabaq = STATIYALAR.filter(p => 
+        p.kod.toLowerCase().includes(filtr.toLowerCase()) || 
+        p.nomi.toLowerCase().includes(filtr.toLowerCase())
+    );
+
+    statusBaxyt.innerText = `Barlıǵı: ${sabaq.length} statıya tabilıdı.`;
+
+    sabaq.forEach(p => {
+        const div = document.createElement('div');
+        div.style.padding = '15px';
+        div.style.background = '#fff';
+        div.style.borderLeft = '5px solid #0070f3';
+        div.style.borderRadius = '4px';
+        div.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+        
+        div.innerHTML = `<strong style="color: #0070f3;">${p.kod}</strong>: ${p.nomi}`;
+        statıyaDizimi.appendChild(div);
+    });
+}
+
+searchInp.addEventListener('input', (e) => {
+    statiyalardiShigar(e.target.value);
+});
+
+statiyalardiShigar();
+</script>
+
+</body>
+</html>
