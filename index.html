@@ -1,11 +1,25 @@
 <!DOCTYPE html>
-<html lang="uz">
-  <head>
-    <meta charset="UTF-8">
-    <title>JXQ Inspektor</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/App.js"></script>
-  </body>
+<html>
+<head>
+  <title>JXQ Inspektor</title>
+  <meta charset="UTF-8">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    // App.js ishindegi kodtı usı jerge qoysańız da boladı
+    // Lekin hárqıylı bolmasın dep, mınawdı qoyıń:
+    fetch('/App.js')
+      .then(response => response.text())
+      .then(code => {
+        const script = document.createElement('script');
+        script.type = 'text/babel';
+        script.text = code;
+        document.body.appendChild(script);
+      });
+  </script>
+</body>
 </html>
