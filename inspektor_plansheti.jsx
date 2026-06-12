@@ -1,0 +1,318 @@
+import { useState } from "react";
+
+const STATIYALAR = [
+  { id: 1, kod: "120-modda 1-q", nomi: "Xavfsizlik kamarini takmagan", jarima: 206000, ball: 0.2, emoji: "🪢" },
+  { id: 2, kod: "120-modda 2-q", nomi: "Dáslepki tibbiy komplekt / ótkirgish joq", jarima: 206000, ball: 0.2, emoji: "🧯" },
+  { id: 3, kod: "121-modda", nomi: "Jol belgilerine bóysinbagan", jarima: 206000, ball: 0.3, emoji: "🚧" },
+  { id: 4, kod: "122-modda 1-q", nomi: "Hújjetsiz júriw", jarima: 412000, ball: 0, emoji: "📄" },
+  { id: 5, kod: "122-modda 2-q", nomi: "Saqtandırıwsız júriw (OSAGO joq)", jarima: 412000, ball: 0, emoji: "📋" },
+  { id: 6, kod: "126-modda 1-q", nomi: "Qizil shiraǵan ótip ketiw", jarima: 824000, ball: 1.0, emoji: "🚦" },
+  { id: 7, kod: "126-modda 2-q", nomi: "Tıyılǵan jerde toqtaw / turıp qalıw", jarima: 824000, ball: 0.5, emoji: "🅿️" },
+  { id: 8, kod: "127-modda", nomi: "Júriw waqtında telefon tutıw", jarima: 1236000, ball: 0.5, emoji: "📱" },
+  { id: 9, kod: "128-modda 1-q", nomi: "Tezlikti 20 km/s asırıw", jarima: 412000, ball: 0.5, emoji: "⚡" },
+  { id: 10, kod: "128-modda 2-q", nomi: "Tezlikti 20–40 km/s asırıw", jarima: 2060000, ball: 1.0, emoji: "⚡" },
+  { id: 11, kod: "128-modda 3-q", nomi: "Tezlikti 40 km/s dan artıq asırıw", jarima: 3708000, ball: 2.0, emoji: "🚨" },
+  { id: 12, kod: "129-modda", nomi: "Qarsı tárep jolına shıǵıw", jarima: 4120000, ball: 1.0, emoji: "⬅️" },
+  { id: 13, kod: "130-modda", nomi: "Nomersiz transport quralı", jarima: 2060000, ball: 0, emoji: "🔲" },
+  { id: 14, kod: "131-modda", nomi: "Mast halda transport quralın basqarıw", jarima: 10300000, ball: 2.0, emoji: "🍷" },
+  { id: 15, kod: "132-modda", nomi: "Tibbiy tekseriwden bas tartiw", jarima: 6180000, ball: 2.0, emoji: "🏥" },
+  { id: 16, kod: "133-modda", nomi: "Qaza ornınan qashıw", jarima: 0, ball: 2.0, emoji: "🏃" },
+];
+
+const formatSum = (n) => n.toLocaleString("uz-UZ") + " so'm";
+
+const STEPS = ["transport", "statiya", "tasdiqlash", "sms"];
+
+export default function App() {
+  const [step, setStep] = useState(0);
+  const [nom, setNom] = useState("");
+  const [nomError, setNomError] = useState("");
+  const [haydovchi, setHaydovchi] = useState(null);
+  const [selectedStatiya, setSelectedStatiya] = useState(null);
+  const [filter, setFilter] = useState("");
+  const [smsJunatildi, setSmsJunatildi] = useState(false);
+  const [protokollar, setProtokolllar] = useState([]);
+  const [inspektor] = useState({ fio: "Yusupov Bahodir", id: "INS-0042", hudud: "Toshkent sh., Yunusobod" });
+
+  const searchHaydovchi = () => {
+    if (!nom.trim()) { setNomError("Davlat raqamini kiriting"); return; }
+    setNomError("");
+    // Simulation — real app DB dan oladi
+    const mock = {
+      "01A123AA": { fio: "Aliyev Bobur Kamoliddinovich", tel: "+998 90 123 45 67", guvohnoma: "AB1234567", jami_ball: 3.5 },
+      "10B456BB": { fio: "Karimova Dilnoza Yusupovna",   tel: "+998 90 765 43 21", guvohnoma: "CD7654321", jami_ball: 7.5 },
+      "30C789CC": { fio: "Toshmatov Jasur Erkinovich",   tel: "+998 99 112 23 34", guvohnoma: "EF9988776", jami_ball: 10.2 },
+    };
+    const found = mock[nom.toUpperCase()];
+    if (found) { setHaydovchi({ ...found, davlat_raqami: nom.toUpperCase() }); setStep(1); }
+    else {
+      setHaydovchi({ fio: "Noma'lum haydovchi", tel: "+998 90 000 00 00", guvohnoma: "—", jami_ball: 0, davlat_raqami: nom.toUpperCase() });
+      setStep(1);
+    }
+  };
+
+  const selectStatiya = (s) => { setSelectedStatiya(s); setStep(2); };
+
+  const tasdiqlash = () => {
+    const yangi = {
+      id: Date.now(),
+      haydovchi,
+      statiya: selectedStatiya,
+      sana: new Date().toLocaleString("uz-UZ"),
+      inspektor: inspektor.fio,
+      yangi_ball: (haydovchi.jami_ball + selectedStatiya.ball).toFixed(1),
+    };
+    setProtokolllar(p => [yangi, ...p]);
+    setSmsJunatildi(false);
+    setStep(3);
+  };
+
+  const reset = () => {
+    setStep(0); setNom(""); setHaydovchi(null); setSelectedStatiya(null); setSmsJunatildi(false);
+  };
+
+  const yangi_jami = haydovchi && selectedStatiya ? (haydovchi.jami_ball + selectedStatiya.ball) : 0;
+
+  const ballColor = (ball) => {
+    if (ball >= 12) return "#dc2626";
+    if (ball >= 8) return "#f59e0b";
+    return "#16a34a";
+  };
+
+  const BallBar = ({ ball }) => {
+    const pct = Math.min((ball / 12) * 100, 100);
+    return (
+      <div style={{ background: "#e5e7eb", borderRadius: 8, height: 10, margin: "6px 0" }}>
+        <div style={{ width: `${pct}%`, background: ballColor(ball), height: 10, borderRadius: 8, transition: "width 0.5s" }} />
+      </div>
+    );
+  };
+
+  const SMSPreview = ({ h, s }) => {
+    const jami = (h.jami_ball + s.ball).toFixed(1);
+    const ogohlantirish = jami >= 12
+      ? "\n⚠️ DIQQAT: 12 ball to'plandi! Ma'lumot sudga yuborildi."
+      : jami >= 8
+      ? "\n⚠️ Ogohlantirish: 8 ballga yetdingiz. Ehtiyot bo'ling!"
+      : "";
+    return `✅ E-JARIMA XABARNOMASI
+
+Haydovchi: ${h.fio}
+Transport: ${h.davlat_raqami}
+
+📋 Statiya: ${s.kod}
+Qoidabuzarlik: ${s.nomi}
+
+💰 Jarima: ${formatSum(s.jarima)}
+🎯 Qo'shilgan ball: +${s.ball}
+📊 Umumiy ball: ${jami}/12${ogohlantirish}
+
+🔗 To'lash: e-jarima.uz
+📞 Savol: 1201`;
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)", fontFamily: "'Segoe UI', sans-serif", padding: "0 0 40px 0" }}>
+
+      {/* Header */}
+      <div style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.1)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "#3b82f6", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🚔</div>
+        <div>
+          <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, letterSpacing: 0.5 }}>YHX Inspektor Plansheti</div>
+          <div style={{ color: "#94a3b8", fontSize: 12 }}>{inspektor.fio} · {inspektor.hudud}</div>
+        </div>
+        <div style={{ marginLeft: "auto", background: "#22c55e", borderRadius: 6, padding: "4px 10px", color: "#fff", fontSize: 12, fontWeight: 600 }}>● JONLI</div>
+      </div>
+
+      {/* Step indicator */}
+      <div style={{ display: "flex", padding: "16px 20px", gap: 6 }}>
+        {["Transport", "Statiya", "Tasdiqlash", "SMS"].map((label, i) => (
+          <div key={i} style={{ flex: 1, textAlign: "center" }}>
+            <div style={{ height: 4, borderRadius: 2, background: i <= step ? "#3b82f6" : "rgba(255,255,255,0.15)", transition: "background 0.3s" }} />
+            <div style={{ color: i <= step ? "#93c5fd" : "#475569", fontSize: 10, marginTop: 4, fontWeight: i === step ? 700 : 400 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ padding: "0 16px" }}>
+
+        {/* STEP 0: Transport raqami */}
+        {step === 0 && (
+          <div style={{ background: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 24, backdropFilter: "blur(8px)" }}>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 20, marginBottom: 6 }}>Davlat raqamini kiriting</div>
+            <div style={{ color: "#94a3b8", fontSize: 14, marginBottom: 20 }}>Ushlanib to'xtatilgan transport ma'lumotlarini aniqlash</div>
+            <input
+              value={nom}
+              onChange={e => setNom(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === "Enter" && searchHaydovchi()}
+              placeholder="Masalan: 01A123AA"
+              style={{ width: "100%", padding: "14px 16px", borderRadius: 12, border: nomError ? "2px solid #ef4444" : "2px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.1)", color: "#fff", fontSize: 20, fontWeight: 700, letterSpacing: 2, outline: "none", boxSizing: "border-box", textAlign: "center" }}
+            />
+            {nomError && <div style={{ color: "#f87171", fontSize: 13, marginTop: 6 }}>{nomError}</div>}
+            <div style={{ color: "#475569", fontSize: 12, textAlign: "center", margin: "10px 0" }}>Sinov uchun: 01A123AA · 10B456BB · 30C789CC</div>
+            <button onClick={searchHaydovchi} style={{ width: "100%", padding: "14px", background: "#3b82f6", border: "none", borderRadius: 12, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", marginTop: 8 }}>
+              🔍 Qidirish
+            </button>
+          </div>
+        )}
+
+        {/* STEP 1: Statiya tanlash */}
+        {step === 1 && haydovchi && (
+          <div>
+            {/* Haydovchi kartasi */}
+            <div style={{ background: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 18, marginBottom: 16, backdropFilter: "blur(8px)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Haydovchi aniqlandi</div>
+                  <div style={{ color: "#fff", fontWeight: 700, fontSize: 16, marginTop: 4 }}>{haydovchi.fio}</div>
+                  <div style={{ color: "#60a5fa", fontWeight: 700, fontSize: 18, marginTop: 2 }}>{haydovchi.davlat_raqami}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 13 }}>Guvohnoma: {haydovchi.guvohnoma}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 13 }}>{haydovchi.tel}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ color: "#94a3b8", fontSize: 11 }}>Hozirgi ball</div>
+                  <div style={{ color: ballColor(haydovchi.jami_ball), fontWeight: 800, fontSize: 28 }}>{haydovchi.jami_ball}</div>
+                  <div style={{ color: "#475569", fontSize: 11 }}>/ 12</div>
+                </div>
+              </div>
+              <BallBar ball={haydovchi.jami_ball} />
+              {haydovchi.jami_ball >= 8 && <div style={{ background: "#f59e0b22", border: "1px solid #f59e0b", borderRadius: 8, padding: "8px 12px", color: "#fbbf24", fontSize: 13, marginTop: 8 }}>⚠️ Ushbu haydovchi {haydovchi.jami_ball} ball to'plagan — SMS ogohlantirish yuborilgan</div>}
+            </div>
+
+            {/* Statiya qidirish */}
+            <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="🔍 Qoidabuzarlikni qidiring..." style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {STATIYALAR.filter(s => s.nomi.toLowerCase().includes(filter.toLowerCase()) || s.kod.includes(filter)).map(s => (
+                <button key={s.id} onClick={() => selectStatiya(s)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14, padding: "14px 16px", cursor: "pointer", textAlign: "left", transition: "all 0.15s" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(59,130,246,0.2)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 22 }}>{s.emoji}</span>
+                      <div>
+                        <div style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{s.nomi}</div>
+                        <div style={{ color: "#60a5fa", fontSize: 12, marginTop: 2 }}>{s.kod}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", minWidth: 90 }}>
+                      <div style={{ color: "#f87171", fontWeight: 700, fontSize: 13 }}>{formatSum(s.jarima)}</div>
+                      {s.ball > 0 && <div style={{ background: "#3b82f622", border: "1px solid #3b82f6", borderRadius: 6, padding: "2px 8px", color: "#60a5fa", fontSize: 12, marginTop: 3 }}>+{s.ball} ball</div>}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Tasdiqlash */}
+        {step === 2 && haydovchi && selectedStatiya && (
+          <div style={{ background: "rgba(255,255,255,0.07)", borderRadius: 16, padding: 24, backdropFilter: "blur(8px)" }}>
+            <div style={{ color: "#fff", fontWeight: 700, fontSize: 20, marginBottom: 20 }}>Protokolni tasdiqlash</div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                ["👤 Haydovchi", haydovchi.fio],
+                ["🚗 Transport", haydovchi.davlat_raqami],
+                ["📋 Statiya", `${selectedStatiya.kod}`],
+                ["⚠️ Qoidabuzarlik", selectedStatiya.nomi],
+                ["💰 Jarima", formatSum(selectedStatiya.jarima)],
+                ["👮 Inspektor", inspektor.fio],
+                ["📍 Hudud", inspektor.hudud],
+              ].map(([label, val]) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 10 }}>
+                  <span style={{ color: "#94a3b8", fontSize: 14 }}>{label}</span>
+                  <span style={{ color: "#fff", fontWeight: 600, fontSize: 14, textAlign: "right", maxWidth: "60%" }}>{val}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Ball hisoblash */}
+            <div style={{ background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.4)", borderRadius: 12, padding: 16, marginTop: 16 }}>
+              <div style={{ color: "#93c5fd", fontWeight: 700, marginBottom: 8 }}>📊 Ball o'zgarishi</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ color: "#94a3b8", fontSize: 12 }}>Hozir</div>
+                  <div style={{ color: "#fff", fontWeight: 800, fontSize: 28 }}>{haydovchi.jami_ball}</div>
+                </div>
+                <div style={{ color: "#f59e0b", fontSize: 24, fontWeight: 700 }}>+{selectedStatiya.ball}</div>
+                <div style={{ color: "#94a3b8", fontSize: 20 }}>→</div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ color: "#94a3b8", fontSize: 12 }}>Yangi</div>
+                  <div style={{ color: ballColor(yangi_jami), fontWeight: 800, fontSize: 28 }}>{yangi_jami.toFixed(1)}</div>
+                </div>
+                <div style={{ color: "#475569", fontSize: 14 }}>/ 12</div>
+              </div>
+              <BallBar ball={yangi_jami} />
+              {yangi_jami >= 12 && <div style={{ color: "#f87171", fontWeight: 700, textAlign: "center", fontSize: 14 }}>🚨 12 ball to'ldi — Ma'lumot sudga yuboriladi!</div>}
+              {yangi_jami >= 8 && yangi_jami < 12 && <div style={{ color: "#fbbf24", fontWeight: 600, textAlign: "center", fontSize: 14 }}>⚠️ 8 ballga yetdi — SMS ogohlantirish yuboriladi</div>}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button onClick={() => setStep(1)} style={{ flex: 1, padding: "14px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, color: "#fff", fontSize: 15, cursor: "pointer" }}>← Orqaga</button>
+              <button onClick={tasdiqlash} style={{ flex: 2, padding: "14px", background: "#3b82f6", border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>✅ Tasdiqlash va SMS yuborish</button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: SMS Preview */}
+        {step === 3 && haydovchi && selectedStatiya && (
+          <div>
+            <div style={{ background: "#16a34a22", border: "1px solid #16a34a", borderRadius: 16, padding: 20, marginBottom: 16, textAlign: "center" }}>
+              <div style={{ fontSize: 40 }}>✅</div>
+              <div style={{ color: "#4ade80", fontWeight: 700, fontSize: 18 }}>Protokol muvaffaqiyatli yaratildi!</div>
+              <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>SMS xabarnoma haydovchi telefoniga yuborilmoqda...</div>
+            </div>
+
+            {/* SMS simulatsiya */}
+            <div style={{ background: "#1e293b", borderRadius: 16, padding: 20, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <div style={{ background: "#25d366", borderRadius: 8, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>📱</div>
+                <div>
+                  <div style={{ color: "#fff", fontWeight: 700 }}>SMS xabarnoma</div>
+                  <div style={{ color: "#94a3b8", fontSize: 12 }}>→ {haydovchi.tel}</div>
+                </div>
+                <div style={{ marginLeft: "auto" }}>
+                  {!smsJunatildi ? (
+                    <button onClick={() => setSmsJunatildi(true)} style={{ background: "#25d366", border: "none", borderRadius: 8, padding: "8px 14px", color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 13 }}>📤 Yuborish</button>
+                  ) : (
+                    <div style={{ background: "#16a34a22", border: "1px solid #16a34a", borderRadius: 8, padding: "6px 12px", color: "#4ade80", fontSize: 12, fontWeight: 700 }}>✓ Yuborildi</div>
+                  )}
+                </div>
+              </div>
+              <pre style={{ background: "#0f172a", borderRadius: 12, padding: 16, color: "#e2e8f0", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "monospace", margin: 0 }}>
+                {SMSPreview({ h: haydovchi, s: selectedStatiya })}
+              </pre>
+            </div>
+
+            <button onClick={reset} style={{ width: "100%", padding: "14px", background: "#3b82f6", border: "none", borderRadius: 12, color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+              ＋ Yangi protokol
+            </button>
+
+            {/* Bugungi protokollar */}
+            {protokollar.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ color: "#94a3b8", fontWeight: 700, fontSize: 14, marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>Bugungi protokollar ({protokollar.length})</div>
+                {protokollar.map(p => (
+                  <div key={p.id} style={{ background: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{p.haydovchi.davlat_raqami}</div>
+                      <div style={{ color: "#94a3b8", fontSize: 12 }}>{p.statiya.nomi}</div>
+                      <div style={{ color: "#475569", fontSize: 11 }}>{p.sana}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: "#f87171", fontWeight: 700 }}>{formatSum(p.statiya.jarima)}</div>
+                      <div style={{ color: ballColor(parseFloat(p.yangi_ball)), fontSize: 12 }}>{p.yangi_ball}/12 ball</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
